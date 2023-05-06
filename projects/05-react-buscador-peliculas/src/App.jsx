@@ -2,6 +2,7 @@ import './App.css'
 import { useMovies } from './hooks/useMovies.js'
 import { useSearch } from './hooks/useSearch.js'
 import { Movies } from './components/Movies.jsx'
+import { searchError } from './services/validation.js'
 import { useState, useCallback } from 'react'
 import debounce from 'just-debounce-it'
 
@@ -9,21 +10,17 @@ import debounce from 'just-debounce-it'
 
 function App () {
   const [sort, setSort] = useState(false)
-
   const { search, setSearch, error } = useSearch()
-  const { movies, loading, getMovies } = useMovies({ search, sort })
+  const { movies, loading, previousSearch, getMovies } = useMovies({sort, search})
 
   const debouncedGetMovies = useCallback(
-    debounce(search => {
-      console.log('search', search)
-      getMovies({ search })
-    }, 300)
-    , [getMovies]
-  )
+    debounce((newSearch,error)=> getMovies({newSearch,error}), 2000)
+    , [])
 
   const handleSubmit = (event) => {
-    event.preventDefault()
-    getMovies({ search })
+    event.preventDefault();
+    const newSearch = event.target.query.value
+    getMovies({newSearch , error:searchError(newSearch) })
   }
 
   const handleSort = () => {
@@ -32,10 +29,16 @@ function App () {
 
   const handleChange = (event) => {
     const newSearch = event.target.value
+    //EJECUTAR EL getMovies , JUNTO CON EL ERROR, PARA QUE SE VALIDE EN LA EJECUCION
     setSearch(newSearch)
-    debouncedGetMovies(newSearch)
+    
+    debouncedGetMovies(newSearch, searchError(newSearch))
   }
 
+  
+  //<logica los>
+  //no mostrar busqueda previa cuando seach sea distinto de search previo o search sea ""
+  //si search es el mismo que el search previo mostrar la misma lista de movies que se dio por ese search
   return (
     <div className='page'>
 
@@ -60,7 +63,8 @@ function App () {
 
       <main>
         {
-          loading ? <p>Cargando...</p> : <Movies movies={movies} />
+        //<logica pelis>
+         (search && search == previousSearch.current) && (loading ? <p>Cargando...</p> : <Movies movies={movies}/> )
         }
       </main>
     </div>
